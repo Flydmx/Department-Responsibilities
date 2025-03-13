@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>编辑职责信息</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #responsibility-list {
+            margin-bottom: 80px; /* 给底部按钮留出空间 */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2>编辑职责信息</h2>
+        <div id="responsibility-list"></div>
+        <div class="sticky-footer">
+            <button id="add-responsibility-btn">添加新职责</button>
+            <button id="save-btn">保存</button>
+        </div>
+    </main>
+    <footer>
+        <p>© 2023 部门职责管理系统</p>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const navList = document.getElementById('nav-list');
+            if (isLoggedIn) {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="departments.html">部门职责</a></li>
+                        <li><a href="profile.html">个人信息</a></li>
+                        <li><a href="approval.html">审核</a></li>
+                        <li><a href="logout.html">退出登录</a></li>
+                    </ul>
+                `;
+            } else {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="login.html">登录</a></li>
+                        <li><a href="register.html">注册</a></li>
+                    </ul>
+                `;
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const deptId = urlParams.get('deptId');
+            const departments = JSON.parse(localStorage.getItem('departments')) || {};
+            const dept = departments[deptId];
+            if (!dept) {
+                alert('部门不存在');
+                window.location.href = 'departments.html';
+                return;
+            }
+
+            const role = localStorage.getItem('role');
+            const userDepartment = localStorage.getItem('department');
+            if (role !== 'super_admin' && 
+                !((role === 'dept_admin' || role === 'dept_leader') && userDepartment === deptId)) {
+                alert('无权编辑');
+                window.location.href = `department_detail.html?deptId=${deptId}`;
+                return;
+            }
+
+            const responsibilityList = document.getElementById('responsibility-list');
+            dept.responsibilities.forEach(resp => {
+                const div = document.createElement('div');
+                div.className = 'responsibility-item';
+                div.innerHTML = `
+                    <label>职责描述：</label>
+                    <input type="text" class="resp-desc" value="${resp.description}">
+                    <label>事项清单（每行一项）：</label>
+                    <textarea class="resp-tasks">${resp.tasks.join('\n')}</textarea>
+                    <button class="delete-btn">删除</button>
+                `;
+                responsibilityList.appendChild(div);
+            });
+
+            document.getElementById('add-responsibility-btn').addEventListener('click', function() {
+                const div = document.createElement('div');
+                div.className = 'responsibility-item';
+                div.innerHTML = `
+                    <label>职责描述：</label>
+                    <input type="text" class="resp-desc" value="">
+                    <label>事项清单（每行一项）：</label>
+                    <textarea class="resp-tasks"></textarea>
+                    <button class="delete-btn">删除</button>
+                `;
+                responsibilityList.appendChild(div);
+            });
+
+            responsibilityList.addEventListener('click', function(event) {
+                if (event.target.classList.contains('delete-btn')) {
+                    event.target.parentElement.remove();
+                }
+            });
+
+            document.getElementById('save-btn').addEventListener('click', function() {
+                const items = document.querySelectorAll('.responsibility-item');
+                const newResponsibilities = [];
+                items.forEach(item => {
+                    const desc = item.querySelector('.resp-desc').value.trim();
+                    const tasksText = item.querySelector('.resp-tasks').value.trim();
+                    const tasks = tasksText.split('\n').map(task => task.trim()).filter(task => task);
+                    if (desc) {
+                        newResponsibilities.push({
+                            id: Date.now() + Math.random(),
+                            description: desc,
+                            tasks: tasks
+                        });
+                    }
+                });
+                dept.responsibilities = newResponsibilities;
+                localStorage.setItem('departments', JSON.stringify(departments));
+                alert('保存成功');
+                window.location.href = `department_detail.html?deptId=${deptId}`;
+            });
+        });
+    </script>
+</body>
+</html>

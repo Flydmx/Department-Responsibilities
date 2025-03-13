@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>部门职责</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2>部门职责信息</h2>
+        <div class="department-list"></div>
+    </main>
+    <footer>
+        <p>© 2023 部门职责管理系统</p>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 导航栏逻辑
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const role = localStorage.getItem('role');
+            const navList = document.getElementById('nav-list');
+            if (isLoggedIn) {
+                if (role === "super_admin") {
+                    navList.innerHTML = `
+                        <ul>
+                            <li><a href="admin.html">系统管理</a></li>
+                            <li><a href="departments.html">部门职责</a></li>
+                            <li><a href="profile.html">个人信息</a></li>
+                            <li><a href="logout.html">退出登录</a></li>
+                        </ul>
+                    `;
+                } else {
+                    navList.innerHTML = `
+                        <ul>
+                            <li><a href="departments.html">部门职责</a></li>
+                            <li><a href="profile.html">个人信息</a></li>
+                            <li><a href="logout.html">退出登录</a></li>
+                        </ul>
+                    `;
+                }
+            } else {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="login.html">登录</a></li>
+                        <li><a href="register.html">注册</a></li>
+                    </ul>
+                `;
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 获取部门数据
+            const departments = JSON.parse(localStorage.getItem('departments')) || {};
+
+            // 定义大类和小类
+            const categories = {
+                '经营单位': ['区局', '行业大客户部', '经营责任类'],
+                '非经营单位': ['运营支撑类', '运营统筹类', '综合管理类', '集团委托管理类']
+            };
+
+            // 分类部门函数
+            function classifyDepartments(departments) {
+                const classified = {
+                    '经营单位': {},
+                    '非经营单位': {}
+                };
+
+                // 初始化分类结构
+                for (const category in categories) {
+                    categories[category].forEach(subcategory => {
+                        classified[category][subcategory] = [];
+                    });
+                }
+
+                // 遍历部门数据进行分类
+                for (const [id, dept] of Object.entries(departments)) {
+                    if (dept.type && dept.type.category && dept.type.subcategory) {
+                        const category = dept.type.category;
+                        const subcategory = dept.type.subcategory;
+                        if (classified[category] && classified[category][subcategory]) {
+                            classified[category][subcategory].push({
+                                id,
+                                abbr: dept.abbreviation || '无'
+                            });
+                        }
+                    }
+                }
+
+                return classified;
+            }
+
+            // 生成部门HTML结构函数
+            function generateDepartmentHTML(classified) {
+                const departmentList = document.querySelector('.department-list');
+                departmentList.innerHTML = '';
+
+                for (const category in classified) {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'category';
+                    categoryDiv.innerHTML = `<h3>${category}</h3>`;
+
+                    for (const subcategory in classified[category]) {
+                        const subcategoryDiv = document.createElement('div');
+                        subcategoryDiv.className = 'subcategory';
+                        subcategoryDiv.innerHTML = `<h4>${subcategory}</h4>`;
+
+                        const deptList = classified[category][subcategory];
+                        const rows = Math.ceil(deptList.length / 5);
+
+                        for (let i = 0; i < rows; i++) {
+                            const rowDiv = document.createElement('div');
+                            rowDiv.className = 'department-row';
+
+                            for (let j = 0; j < 5; j++) {
+                                const index = i * 5 + j;
+                                if (index < deptList.length) {
+                                    const dept = deptList[index];
+                                    const deptLink = document.createElement('a');
+                                    deptLink.href = `department_detail.html?deptId=${dept.id}`;
+                                    deptLink.textContent = dept.abbr;
+                                    deptLink.className = 'department-abbr';
+                                    rowDiv.appendChild(deptLink);
+                                }
+                            }
+
+                            subcategoryDiv.appendChild(rowDiv);
+                        }
+
+                        categoryDiv.appendChild(subcategoryDiv);
+                    }
+
+                    departmentList.appendChild(categoryDiv);
+                }
+            }
+
+            // 执行分类和展示
+            const classified = classifyDepartments(departments);
+            generateDepartmentHTML(classified);
+        });
+    </script>
+</body>
+</html>

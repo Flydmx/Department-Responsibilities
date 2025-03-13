@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>系统管理员配置</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h1>系统管理员配置</h1>
+        <section>
+            <h2>用户管理</h2>
+            <table id="user-table">
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>角色</th>
+                        <th>部门</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list"></tbody>
+            </table>
+            <button id="add-user-btn">添加用户</button>
+        </section>
+        <section>
+            <h2>部门管理</h2>
+            <table id="department-table">
+                <thead>
+                    <tr>
+                        <th>部门ID</th>
+                        <th>部门名称</th>
+                        <th>部门缩写</th>
+                        <th>部门类型</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="department-list"></tbody>
+            </table>
+            <button id="add-department-btn">添加部门</button>
+        </section>
+        <button id="clear-data-btn">清除所有数据</button>
+
+        <div id="add-user-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">×</span>
+                <h3>添加用户</h3>
+                <form id="add-user-form">
+                    <label for="add-username">用户名：</label>
+                    <input type="text" id="add-username" required>
+                    <label for="add-password">密码：</label>
+                    <input type="password" id="add-password" required>
+                    <label for="add-role">角色：</label>
+                    <select id="add-role" required>
+                        <option value="employee">普通员工</option>
+                        <option value="dept_admin">部门管理员</option>
+                        <option value="dept_leader">部门分管领导</option>
+                    </select>
+                    <label for="add-department">部门：</label>
+                    <select id="add-department"></select>
+                    <button type="submit">添加</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="add-dept-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">×</span>
+                <h3>添加部门</h3>
+                <form id="add-dept-form">
+                    <label for="add-dept-id">部门ID：</label>
+                    <input type="text" id="add-dept-id" required>
+                    <label for="add-dept-name">部门名称：</label>
+                    <input type="text" id="add-dept-name" required>
+                    <label for="add-dept-abbr">部门缩写：</label>
+                    <input type="text" id="add-dept-abbr" required>
+                    <label for="add-dept-category">部门类型：</label>
+                    <select id="add-dept-category" required>
+                        <option value="">请选择</option>
+                        <option value="经营单位">经营单位</option>
+                        <option value="非经营单位">非经营单位</option>
+                    </select>
+                    <label for="add-dept-subcategory">子类别：</label>
+                    <select id="add-dept-subcategory" required>
+                        <option value="">请选择</option>
+                    </select>
+                    <button type="submit">添加</button>
+                </form>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>© 2023 部门职责管理系统</p>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const role = localStorage.getItem('role');
+            const navList = document.getElementById('nav-list');
+            if (isLoggedIn) {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="departments.html">部门职责</a></li>
+                        <li><a href="logout.html">退出登录</a></li>
+                    </ul>
+                `;
+            } else {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="login.html">登录</a></li>
+                        <li><a href="register.html">注册</a></li>
+                    </ul>
+                `;
+            }
+
+            if (role !== 'super_admin') {
+                alert('无权访问');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+            const departments = JSON.parse(localStorage.getItem('departments')) || {};
+            const userList = document.getElementById('user-list');
+            const departmentList = document.getElementById('department-list');
+            const addUserModal = document.getElementById('add-user-modal');
+            const addDeptModal = document.getElementById('add-dept-modal');
+            const addUserForm = document.getElementById('add-user-form');
+            const addDeptForm = document.getElementById('add-dept-form');
+
+            // 渲染用户列表
+            for (const [username, user] of Object.entries(users)) {
+                const tr = document.createElement('tr');
+                const deptName = user.department && departments[user.department] 
+                    ? departments[user.department].name 
+                    : '无';
+                tr.innerHTML = `
+                    <td>${username}</td>
+                    <td>${user.role}</td>
+                    <td>${deptName}</td>
+                    <td><button class="delete-btn" data-username="${username}">删除</button></td>
+                `;
+                userList.appendChild(tr);
+            }
+
+            // 渲染部门列表
+            for (const [id, dept] of Object.entries(departments)) {
+                const tr = document.createElement('tr');
+                const typeStr = dept.type ? `${dept.type.category} - ${dept.type.subcategory}` : '无';
+                tr.innerHTML = `
+                    <td>${id}</td>
+                    <td>${dept.name}</td>
+                    <td>${dept.abbreviation || '无'}</td>
+                    <td>${typeStr}</td>
+                    <td><button class="delete-btn" data-dept-id="${id}">删除</button></td>
+                `;
+                departmentList.appendChild(tr);
+            }
+
+            // 添加用户按钮
+            document.getElementById('add-user-btn').addEventListener('click', function() {
+                const deptSelect = document.getElementById('add-department');
+                deptSelect.innerHTML = '<option value="">无</option>';
+                for (const [id, dept] of Object.entries(departments)) {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = dept.name;
+                    deptSelect.appendChild(option);
+                }
+                addUserModal.style.display = 'block';
+            });
+
+            // 添加部门按钮
+            document.getElementById('add-department-btn').addEventListener('click', function() {
+                addDeptModal.style.display = 'block';
+            });
+
+            // 关闭模态框
+            document.querySelectorAll('.close').forEach(close => {
+                close.addEventListener('click', function() {
+                    addUserModal.style.display = 'none';
+                    addDeptModal.style.display = 'none';
+                });
+            });
+
+            // 提交添加用户表单
+            addUserForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const username = document.getElementById('add-username').value.trim();
+                const password = document.getElementById('add-password').value;
+                const role = document.getElementById('add-role').value;
+                const department = document.getElementById('add-department').value || null;
+
+                if (!username || !password || !role) {
+                    alert('请填写所有必填项');
+                    return;
+                }
+                if (users[username]) {
+                    alert('用户名已存在');
+                    return;
+                }
+                if (role !== 'employee' && !department) {
+                    alert('部门管理员和部门分管领导必须选择部门');
+                    return;
+                }
+
+                users[username] = { password, role, department };
+                localStorage.setItem('users', JSON.stringify(users));
+                addUserModal.style.display = 'none';
+                location.reload();
+            });
+
+            // 动态更新子类别选项
+            document.getElementById('add-dept-category').addEventListener('change', function() {
+                const category = this.value;
+                const subcategorySelect = document.getElementById('add-dept-subcategory');
+                subcategorySelect.innerHTML = '<option value="">请选择</option>';
+                if (category === '经营单位') {
+                    const options = ['区局', '行业大客户部', '经营责任类'];
+                    options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option;
+                        opt.textContent = option;
+                        subcategorySelect.appendChild(opt);
+                    });
+                } else if (category === '非经营单位') {
+                    const options = ['运营支撑类', '运营统筹类', '综合管理类', '集团委托管理类'];
+                    options.forEach(option => {
+                        const opt = document.createElement('option');
+                        opt.value = option;
+                        opt.textContent = option;
+                        subcategorySelect.appendChild(opt);
+                    });
+                }
+            });
+
+            // 提交添加部门表单
+            addDeptForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const id = document.getElementById('add-dept-id').value.trim();
+                const name = document.getElementById('add-dept-name').value.trim();
+                const abbr = document.getElementById('add-dept-abbr').value.trim();
+                const category = document.getElementById('add-dept-category').value;
+                const subcategory = document.getElementById('add-dept-subcategory').value;
+
+                if (!id || !name || !abbr || !category || !subcategory) {
+                    alert('请填写所有必填项');
+                    return;
+                }
+                if (departments[id]) {
+                    alert('部门ID已存在');
+                    return;
+                }
+
+                departments[id] = {
+                    name,
+                    abbreviation: abbr,
+                    type: {
+                        category,
+                        subcategory
+                    },
+                    responsibilities: []
+                };
+                localStorage.setItem('departments', JSON.stringify(departments));
+                addDeptModal.style.display = 'none';
+                location.reload();
+            });
+
+            // 删除用户
+            userList.addEventListener('click', function(event) {
+                if (event.target.classList.contains('delete-btn')) {
+                    const username = event.target.getAttribute('data-username');
+                    delete users[username];
+                    localStorage.setItem('users', JSON.stringify(users));
+                    event.target.parentElement.parentElement.remove();
+                }
+            });
+
+            // 删除部门
+            departmentList.addEventListener('click', function(event) {
+                if (event.target.classList.contains('delete-btn')) {
+                    const deptId = event.target.getAttribute('data-dept-id');
+                    delete departments[deptId];
+                    localStorage.setItem('departments', JSON.stringify(departments));
+                    event.target.parentElement.parentElement.remove();
+                }
+            });
+
+            // 清除所有数据
+            document.getElementById('clear-data-btn').addEventListener('click', function() {
+                if (confirm('确定要清除所有数据吗？此操作不可撤销。')) {
+                    localStorage.clear();
+                    alert('所有数据已清除');
+                    location.reload();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

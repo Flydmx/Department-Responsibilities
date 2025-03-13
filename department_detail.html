@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>部门职责详情</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2>部门职责详情</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: center; width: 50px;">序号</th>
+                    <th style="text-align: center; width: 150px;">部门名称</th>
+                    <th style="text-align: center; width: 300px;">部门职责</th>
+                    <th style="text-align: center; width: 400px;">事项清单</th>
+                </tr>
+            </thead>
+            <tbody id="responsibility-table"></tbody>
+        </table>
+    </main>
+    <footer>
+        <p>© 2023 部门职责管理系统</p>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            const navList = document.getElementById('nav-list');
+            if (isLoggedIn) {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="departments.html">部门职责</a></li>
+                        <li><a href="profile.html">个人信息</a></li>
+                        <li><a href="approval.html">审核</a></li>
+                        <li><a href="logout.html">退出登录</a></li>
+                    </ul>
+                `;
+            } else {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="login.html">登录</a></li>
+                        <li><a href="register.html">注册</a></li>
+                    </ul>
+                `;
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const deptId = urlParams.get('deptId');
+            const departments = JSON.parse(localStorage.getItem('departments')) || {};
+            const dept = departments[deptId];
+            if (!dept) {
+                alert('部门不存在');
+                window.location.href = 'departments.html';
+                return;
+            }
+
+            const tableBody = document.getElementById('responsibility-table');
+            dept.responsibilities.forEach((resp, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td style="text-align: center;">${dept.name}</td>
+                    <td style="text-align: left;">${resp.description}</td>
+                    <td style="text-align: left;">${resp.tasks.join('<br>')}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            const role = localStorage.getItem('role');
+            const userDepartment = localStorage.getItem('department');
+            let canEdit = false;
+            if (role === 'super_admin' || 
+                ((role === 'dept_admin' || role === 'dept_leader') && userDepartment === deptId)) {
+                canEdit = true;
+            }
+
+            if (canEdit) {
+                const editBtn = document.createElement('button');
+                editBtn.textContent = '修改职责信息';
+                editBtn.onclick = function() {
+                    window.location.href = `edit_responsibilities.html?deptId=${deptId}`;
+                };
+                document.querySelector('main').appendChild(editBtn);
+            }
+        });
+    </script>
+</body>
+</html>
