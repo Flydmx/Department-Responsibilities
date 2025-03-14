@@ -96,7 +96,7 @@
         <p>© 2023 部门职责管理系统</p>
     </footer>
     <script>
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', function() {
             const isLoggedIn = localStorage.getItem('isLoggedIn');
             const role = localStorage.getItem('role');
             const navList = document.getElementById('nav-list');
@@ -122,6 +122,8 @@
                 return;
             }
 
+            const users = JSON.parse(localStorage.getItem('users')) || {};
+            const departments = JSON.parse(localStorage.getItem('departments')) || {};
             const userList = document.getElementById('user-list');
             const departmentList = document.getElementById('department-list');
             const addUserModal = document.getElementById('add-user-modal');
@@ -129,61 +131,45 @@
             const addUserForm = document.getElementById('add-user-form');
             const addDeptForm = document.getElementById('add-dept-form');
 
-            // 获取用户列表
-            const apiUrl = 'http://10.143.27.85:28127/api/lowcode/process/atom/EkwXAy';
-            const appKey = 'c500593cdcb34fe5944f343f7180a6b6';  // 替换为你的应用密钥
-
-            const usersResponse = await fetch(apiUrl, {
-            method: 'GET', // 或 'POST'，根据API要求
-            headers: {
-            'lcdpAppKey': appKey,  // 添加应用密钥
-            }
-            });
-            const users = await usersResponse.json();
-
-            // 获取部门列表
-            const departmentsResponse = await fetch('/api/departments');
-            const departments = await departmentsResponse.json();
-
             // 渲染用户列表
-            users.forEach(user => {
+            for (const [username, user] of Object.entries(users)) {
                 const tr = document.createElement('tr');
-                const deptName = user.departmentId && departments.find(d => d.id === user.departmentId)
-                    ? departments.find(d => d.id === user.departmentId).name
+                const deptName = user.department && departments[user.department] 
+                    ? departments[user.department].name 
                     : '无';
                 tr.innerHTML = `
-                    <td>${user.username}</td>
+                    <td>${username}</td>
                     <td>${user.role}</td>
                     <td>${deptName}</td>
-                    <td><button class="delete-btn" data-username="${user.username}">删除</button></td>
+                    <td><button class="delete-btn" data-username="${username}">删除</button></td>
                 `;
                 userList.appendChild(tr);
-            });
+            }
 
             // 渲染部门列表
-            departments.forEach(dept => {
+            for (const [id, dept] of Object.entries(departments)) {
                 const tr = document.createElement('tr');
-                const typeStr = dept.category ? `${dept.category} - ${dept.subcategory}` : '无';
+                const typeStr = dept.type ? `${dept.type.category} - ${dept.type.subcategory}` : '无';
                 tr.innerHTML = `
-                    <td>${dept.id}</td>
+                    <td>${id}</td>
                     <td>${dept.name}</td>
                     <td>${dept.abbreviation || '无'}</td>
                     <td>${typeStr}</td>
-                    <td><button class="delete-btn" data-dept-id="${dept.id}">删除</button></td>
+                    <td><button class="delete-btn" data-dept-id="${id}">删除</button></td>
                 `;
                 departmentList.appendChild(tr);
-            });
+            }
 
             // 添加用户按钮
             document.getElementById('add-user-btn').addEventListener('click', function() {
                 const deptSelect = document.getElementById('add-department');
                 deptSelect.innerHTML = '<option value="">无</option>';
-                departments.forEach(dept => {
+                for (const [id, dept] of Object.entries(departments)) {
                     const option = document.createElement('option');
-                    option.value = dept.id;
+                    option.value = id;
                     option.textContent = dept.name;
                     deptSelect.appendChild(option);
-                });
+                }
                 addUserModal.style.display = 'block';
             });
 
@@ -201,32 +187,28 @@
             });
 
             // 提交添加用户表单
-            addUserForm.addEventListener('submit', async function(event) {
+            addUserForm.addEventListener('submit', function(event) {
                 event.preventDefault();
                 const username = document.getElementById('add-username').value.trim();
                 const password = document.getElementById('add-password').value;
                 const role = document.getElementById('add-role').value;
-                const departmentId = document.getElementById('add-department').value || null;
+                const department = document.getElementById('add-department').value || null;
 
                 if (!username || !password || !role) {
                     alert('请填写所有必填项');
                     return;
                 }
-                if (users.find(u => u.username === username)) {
+                if (users[username]) {
                     alert('用户名已存在');
                     return;
                 }
-                if (role !== 'employee' && !departmentId) {
+                if (role !== 'employee' && !department) {
                     alert('部门管理员和部门分管领导必须选择部门');
                     return;
                 }
 
-                const newUser = { username, password, role, departmentId };
-                await fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newUser)
-                });
+                users[username] = { password, role, department };
+                localStorage.setItem('users', JSON.stringify(users));
                 addUserModal.style.display = 'none';
                 location.reload();
             });
@@ -256,7 +238,7 @@
             });
 
             // 提交添加部门表单
-            addDeptForm.addEventListener('submit', async function(event) {
+            addDeptForm.addEventListener('submit', function(event) {
                 event.preventDefault();
                 const id = document.getElementById('add-dept-id').value.trim();
                 const name = document.getElementById('add-dept-name').value.trim();
@@ -268,43 +250,49 @@
                     alert('请填写所有必填项');
                     return;
                 }
-                if (departments.find(d => d.id === id)) {
+                if (departments[id]) {
                     alert('部门ID已存在');
                     return;
                 }
 
-                const newDept = { id, name, abbreviation: abbr, category, subcategory };
-                await fetch('/api/departments', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newDept)
-                });
+                departments[id] = {
+                    name,
+                    abbreviation: abbr,
+                    type: {
+                        category,
+                        subcategory
+                    },
+                    responsibilities: []
+                };
+                localStorage.setItem('departments', JSON.stringify(departments));
                 addDeptModal.style.display = 'none';
                 location.reload();
             });
 
             // 删除用户
-            userList.addEventListener('click', async function(event) {
+            userList.addEventListener('click', function(event) {
                 if (event.target.classList.contains('delete-btn')) {
                     const username = event.target.getAttribute('data-username');
-                    await fetch(`/api/users/${username}`, { method: 'DELETE' });
+                    delete users[username];
+                    localStorage.setItem('users', JSON.stringify(users));
                     event.target.parentElement.parentElement.remove();
                 }
             });
 
             // 删除部门
-            departmentList.addEventListener('click', async function(event) {
+            departmentList.addEventListener('click', function(event) {
                 if (event.target.classList.contains('delete-btn')) {
                     const deptId = event.target.getAttribute('data-dept-id');
-                    await fetch(`/api/departments/${deptId}`, { method: 'DELETE' });
+                    delete departments[deptId];
+                    localStorage.setItem('departments', JSON.stringify(departments));
                     event.target.parentElement.parentElement.remove();
                 }
             });
 
             // 清除所有数据
-            document.getElementById('clear-data-btn').addEventListener('click', async function() {
+            document.getElementById('clear-data-btn').addEventListener('click', function() {
                 if (confirm('确定要清除所有数据吗？此操作不可撤销。')) {
-                    await fetch('/api/clear-data', { method: 'DELETE' });
+                    localStorage.clear();
                     alert('所有数据已清除');
                     location.reload();
                 }
