@@ -4,6 +4,29 @@
     <meta charset="UTF-8">
     <title>部门职责</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- 内联CSS调整部门行布局 -->
+    <style>
+        .department-row {
+            display: flex;
+            justify-content: flex-start; /* 从左开始排列 */
+            gap: 10px; /* 部门之间的间距 */
+            margin-bottom: 10px;
+        }
+
+        .department-abbr {
+            width: 18%; /* 每行5列，留一些间隙 */
+            text-align: center;
+            padding: 5px;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #333;
+            box-sizing: border-box; /* 确保边框和内边距包含在宽度内 */
+        }
+
+        .department-abbr:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -141,5 +164,6 @@
             generateDepartmentHTML(classified);
         });
     </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92194a69fe917b95',t:'MTc0MjE4MDk1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 </body>
 </html>

@@ -41,10 +41,14 @@ footer {
     background-color: #343a40;
     color: white;
     text-align: center;
-    padding: 10px 0;
+    height: 30px;
+    padding: 0; /* 移除 padding */
     position: fixed;
     bottom: 0;
     width: 100%;
+    display: flex; /* 启用 flexbox */
+    justify-content: center; /* 水平居中 */
+    align-items: center; /* 垂直居中 */
 }
 
 form {
