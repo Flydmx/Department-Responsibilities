@@ -22,71 +22,80 @@
             </thead>
             <tbody id="responsibility-table"></tbody>
         </table>
+        <div id="edit-button-container"></div>
     </main>
     <footer>
         <p>© 2025 部门职责管理系统</p>
     </footer>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
-            const navList = document.getElementById('nav-list');
-            if (isLoggedIn) {
-                navList.innerHTML = `
-                    <ul>
-                        <li><a href="departments.html">部门职责</a></li>
-                        <li><a href="profile.html">个人信息</a></li>
-                        <li><a href="approval.html">审核</a></li>
-                        <li><a href="logout.html">退出登录</a></li>
-                    </ul>
-                `;
-            } else {
-                navList.innerHTML = `
-                    <ul>
-                        <li><a href="login.html">登录</a></li>
-                        <li><a href="register.html">注册</a></li>
-                    </ul>
-                `;
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
                 window.location.href = 'login.html';
                 return;
             }
 
+            const navList = document.getElementById('nav-list');
+            navList.innerHTML = `
+                <ul>
+                    <li><a href="departments.html">部门职责</a></li>
+                    <li><a href="profile.html">个人信息</a></li>
+                    <li><a href="approval.html">审核</a></li>
+                    <li><a href="logout.html">退出登录</a></li>
+                </ul>
+            `;
+
             const urlParams = new URLSearchParams(window.location.search);
             const deptId = urlParams.get('deptId');
-            const departments = JSON.parse(localStorage.getItem('departments')) || {};
-            const dept = departments[deptId];
-            if (!dept) {
-                alert('部门不存在');
-                window.location.href = 'departments.html';
-                return;
-            }
 
-            const tableBody = document.getElementById('responsibility-table');
-            dept.responsibilities.forEach((resp, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="text-align: center;">${index + 1}</td>
-                    <td style="text-align: center;">${dept.name}</td>
-                    <td style="text-align: left;">${resp.description}</td>
-                    <td style="text-align: left;">${resp.tasks.join('<br>')}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
+            try {
+                const response = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/responsibilities`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const responsibilities = await response.json();
 
-            const role = localStorage.getItem('role');
-            const userDepartment = localStorage.getItem('department');
-            let canEdit = false;
-            if (role === 'super_admin' || 
-                ((role === 'dept_admin' || role === 'dept_leader') && userDepartment === deptId)) {
-                canEdit = true;
-            }
+                const tableBody = document.getElementById('responsibility-table');
+                responsibilities.forEach((resp, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="text-align: center;">${index + 1}</td>
+                        <td style="text-align: center;">${deptId}</td>
+                        <td style="text-align: left;">${resp.description}</td>
+                        <td style="text-align: left;">${resp.tasks.join('<br>')}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+                
+                // 获取用户信息以判断是否显示编辑按钮
+                const userResponse = await fetch('http://localhost:3001/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!userResponse.ok) throw new Error('获取用户信息失败');
+                const user = await userResponse.json();
 
-            if (canEdit) {
-                const editBtn = document.createElement('button');
-                editBtn.textContent = '修改职责信息';
-                editBtn.onclick = function() {
-                    window.location.href = `edit_responsibilities.html?deptId=${deptId}`;
-                };
-                document.querySelector('main').appendChild(editBtn);
+                const role = user.role;
+                const userDepartment = user.department_id;
+                let canEdit = false;
+                if (role === 'super_admin' || 
+                    ((role === 'dept_admin' || role === 'dept_leader') && userDepartment === deptId)) {
+                    canEdit = true;
+                }
+
+                if (canEdit) {
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = '修改职责信息';
+                    editBtn.onclick = function() {
+                        window.location.href = `edit_responsibilities.html?deptId=${deptId}`;
+                    };
+                    document.getElementById('edit-button-container').appendChild(editBtn);
+                } else {
+                    console.log('无权限编辑：', { role, userDepartment, deptId });
+                }
+                // 注意：后端当前未返回部门名称，需后端扩展支持
+                // 临时使用 deptId 代替部门名称
+            } catch (error) {
+                console.error('获取职责数据失败', error);
+                alert('获取职责数据失败');
             }
         });
     </script>

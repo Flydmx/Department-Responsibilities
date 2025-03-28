@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         #responsibility-list {
-            margin-bottom: 80px; /* 给底部按钮留出空间 */
+            margin-bottom: 80px;
         }
     </style>
 </head>
@@ -26,101 +26,103 @@
         <p>© 2025 部门职责管理系统</p>
     </footer>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
-            const navList = document.getElementById('nav-list');
-            if (isLoggedIn) {
-                navList.innerHTML = `
-                    <ul>
-                        <li><a href="departments.html">部门职责</a></li>
-                        <li><a href="profile.html">个人信息</a></li>
-                        <li><a href="approval.html">审核</a></li>
-                        <li><a href="logout.html">退出登录</a></li>
-                    </ul>
-                `;
-            } else {
-                navList.innerHTML = `
-                    <ul>
-                        <li><a href="login.html">登录</a></li>
-                        <li><a href="register.html">注册</a></li>
-                    </ul>
-                `;
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
                 window.location.href = 'login.html';
                 return;
             }
 
+            const navList = document.getElementById('nav-list');
+            navList.innerHTML = `
+                <ul>
+                    <li><a href="departments.html">部门职责</a></li>
+                    <li><a href="profile.html">个人信息</a></li>
+                    <li><a href="approval.html">审核</a></li>
+                    <li><a href="logout.html">退出登录</a></li>
+                </ul>
+            `;
+
             const urlParams = new URLSearchParams(window.location.search);
             const deptId = urlParams.get('deptId');
-            const departments = JSON.parse(localStorage.getItem('departments')) || {};
-            const dept = departments[deptId];
-            if (!dept) {
-                alert('部门不存在');
-                window.location.href = 'departments.html';
-                return;
-            }
 
-            const role = localStorage.getItem('role');
-            const userDepartment = localStorage.getItem('department');
-            if (role !== 'super_admin' && 
-                !((role === 'dept_admin' || role === 'dept_leader') && userDepartment === deptId)) {
-                alert('无权编辑');
-                window.location.href = `department_detail.html?deptId=${deptId}`;
-                return;
-            }
+            try {
+                const response = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/responsibilities`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const responsibilities = await response.json();
 
-            const responsibilityList = document.getElementById('responsibility-list');
-            dept.responsibilities.forEach(resp => {
-                const div = document.createElement('div');
-                div.className = 'responsibility-item';
-                div.innerHTML = `
-                    <label>职责描述：</label>
-                    <input type="text" class="resp-desc" value="${resp.description}">
-                    <label>事项清单（每行一项）：</label>
-                    <textarea class="resp-tasks">${resp.tasks.join('\n')}</textarea>
-                    <button class="delete-btn">删除</button>
-                `;
-                responsibilityList.appendChild(div);
-            });
+                const responsibilityList = document.getElementById('responsibility-list');
+                responsibilities.forEach(resp => {
+                    const div = document.createElement('div');
+                    div.className = 'responsibility-item';
+                    div.innerHTML = `
+                        <label>职责描述：</label>
+                        <input type="text" class="resp-desc" value="${resp.description}">
+                        <label>事项清单（每行一项）：</label>
+                        <textarea class="resp-tasks">${resp.tasks.join('\n')}</textarea>
+                        <button class="delete-btn">删除</button>
+                    `;
+                    responsibilityList.appendChild(div);
+                });
 
-            document.getElementById('add-responsibility-btn').addEventListener('click', function() {
-                const div = document.createElement('div');
-                div.className = 'responsibility-item';
-                div.innerHTML = `
-                    <label>职责描述：</label>
-                    <input type="text" class="resp-desc" value="">
-                    <label>事项清单（每行一项）：</label>
-                    <textarea class="resp-tasks"></textarea>
-                    <button class="delete-btn">删除</button>
-                `;
-                responsibilityList.appendChild(div);
-            });
+                document.getElementById('add-responsibility-btn').addEventListener('click', function() {
+                    const div = document.createElement('div');
+                    div.className = 'responsibility-item';
+                    div.innerHTML = `
+                        <label>职责描述：</label>
+                        <input type="text" class="resp-desc" value="">
+                        <label>事项清单（每行一项）：</label>
+                        <textarea class="resp-tasks"></textarea>
+                        <button class="delete-btn">删除</button>
+                    `;
+                    responsibilityList.appendChild(div);
+                });
 
-            responsibilityList.addEventListener('click', function(event) {
-                if (event.target.classList.contains('delete-btn')) {
-                    event.target.parentElement.remove();
-                }
-            });
-
-            document.getElementById('save-btn').addEventListener('click', function() {
-                const items = document.querySelectorAll('.responsibility-item');
-                const newResponsibilities = [];
-                items.forEach(item => {
-                    const desc = item.querySelector('.resp-desc').value.trim();
-                    const tasksText = item.querySelector('.resp-tasks').value.trim();
-                    const tasks = tasksText.split('\n').map(task => task.trim()).filter(task => task);
-                    if (desc) {
-                        newResponsibilities.push({
-                            id: Date.now() + Math.random(),
-                            description: desc,
-                            tasks: tasks
-                        });
+                responsibilityList.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('delete-btn')) {
+                        event.target.parentElement.remove();
                     }
                 });
-                dept.responsibilities = newResponsibilities;
-                localStorage.setItem('departments', JSON.stringify(departments));
-                alert('保存成功');
-                window.location.href = `department_detail.html?deptId=${deptId}`;
-            });
+
+                document.getElementById('save-btn').addEventListener('click', async function() {
+                    const items = document.querySelectorAll('.responsibility-item');
+                    const newResponsibilities = [];
+                    items.forEach(item => {
+                        const desc = item.querySelector('.resp-desc').value.trim();
+                        const tasksText = item.querySelector('.resp-tasks').value.trim();
+                        const tasks = tasksText.split('\n').map(task => task.trim()).filter(task => task);
+                        if (desc) {
+                            newResponsibilities.push({
+                                description: desc,
+                                tasks: tasks
+                            });
+                        }
+                    });
+
+                    try {
+                        const updateResponse = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/responsibilities`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(newResponsibilities)
+                        });
+                        if (updateResponse.ok) {
+                            alert('保存成功');
+                            window.location.href = `department_detail.html?deptId=${deptId}`;
+                        } else {
+                            alert('保存失败');
+                        }
+                    } catch (error) {
+                        alert('网络错误');
+                    }
+                });
+            } catch (error) {
+                console.error('获取职责数据失败', error);
+                alert('获取职责数据失败');
+            }
         });
     </script>
 </body>
