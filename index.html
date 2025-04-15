@@ -20,9 +20,9 @@
     </footer>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const token = localStorage.getItem('token');
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
             const navList = document.getElementById('nav-list');
-            if (token) {
+            if (isLoggedIn) {
                 navList.innerHTML = `
                     <ul>
                         <li><a href="departments.html">部门职责</a></li>

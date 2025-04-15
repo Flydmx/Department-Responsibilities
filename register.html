@@ -23,7 +23,7 @@
                 <option value="dept_leader">部门分管领导</option>
             </select>
             <label for="department">所属部门：</label>
-            <select id="department"></select>
+            <select id="department" required></select>
             <button type="submit">注册</button>
         </form>
         <p>已有账号？<a href="login.html">去登录</a></p>
@@ -33,15 +33,27 @@
     </footer>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
             const navList = document.getElementById('nav-list');
-            navList.innerHTML = `
-                <ul>
-                    <li><a href="login.html">登录</a></li>
-                    <li><a href="register.html">注册</a></li>
-                </ul>
-            `;
+            if (isLoggedIn) {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="departments.html">部门职责</a></li>
+                        <li><a href="profile.html">个人信息</a></li>
+                        <li><a href="logout.html">退出登录</a></li>
+                    </ul>
+                `;
+            } else {
+                navList.innerHTML = `
+                    <ul>
+                        <li><a href="login.html">登录</a></li>
+                        <li><a href="register.html">注册</a></li>
+                    </ul>
+                `;
+            }
 
-            fetch('http://10.7.209.28:3001/api/departments')
+            // Fetch department data from the backend
+            fetch('http://localhost:3001/api/departments')
                 .then(response => response.json())
                 .then(departments => {
                     const departmentSelect = document.getElementById('department');
@@ -60,38 +72,47 @@
                 .catch(error => console.error('获取部门数据失败', error));
         });
 
-        document.getElementById('register-form').addEventListener('submit', async function(event) {
+        document.getElementById('register-form').addEventListener('submit', function(event) {
             event.preventDefault();
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const role = document.getElementById('role').value;
-            const department = document.getElementById('department').value || null;
+            const department = document.getElementById('department').value;
 
             if (role !== 'employee' && !department) {
                 alert('部门管理员和部门分管领导必须选择所属部门');
                 return;
             }
 
-            const data = { username, password, role, department };
+            const data = {
+                username,
+                password,
+                role,
+                department
+            };
 
-            try {
-                const response = await fetch('http://10.7.209.28:3001/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-
-                if (response.ok) {
+            // Send registration data to the backend API
+            fetch('http://localhost:3001/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.message) {
                     alert('注册成功，请登录');
                     window.location.href = 'login.html';
-                } else {
-                    alert(result.error || '注册失败');
+                } else if (result.error) {
+                    alert(result.error);
                 }
-            } catch (error) {
-                alert('网络错误');
-            }
+            })
+            .catch(error => {
+                console.error('注册请求失败', error);
+                alert('注册失败，请稍后再试');
+            });
         });
     </script>
 </body>

@@ -25,38 +25,49 @@
     </footer>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const navList = document.getElementById('nav-list');
-            navList.innerHTML = `
-                <ul>
-                    <li><a href="login.html">登录</a></li>
-                    <li><a href="register.html">注册</a></li>
-                </ul>
-            `;
-        });
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            try {
-                const response = await fetch('http://10.7.209.28:3001/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await response.json();
-
-                if (response.ok) {
-                    localStorage.setItem('token', data.token);
-                    window.location.href = 'departments.html';
+                const isLoggedIn = localStorage.getItem('isLoggedIn');
+                const navList = document.getElementById('nav-list');
+                if (isLoggedIn) {
+                    navList.innerHTML = `
+                    <ul>
+                        <li><a href="departments.html">部门职责</a></li>
+                        <li><a href="profile.html">个人信息</a></li>
+                        <li><a href="logout.html">退出登录</a></li>
+                    </ul>
+                `;
                 } else {
-                    alert(data.error || '登录失败');
+                    navList.innerHTML = `
+                    <ul>
+                        <li><a href="login.html">登录</a></li>
+                        <li><a href="register.html">注册</a></li>
+                    </ul>
+                `;
                 }
-            } catch (error) {
-                alert('网络错误');
-            }
-        });
+            });
+
+         document.getElementById('login-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const response = await fetch('http://localhost:3001/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        localStorage.setItem('token', data.token);
+                        window.location.href = 'departments.html';
+                    } else {
+                        alert(data.error || '登录失败');
+                    }
+                } catch (error) {
+                    alert('网络错误');
+                }
+            });   
     </script>
 </body>
 </html>
