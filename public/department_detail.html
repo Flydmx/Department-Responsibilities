@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>部门职责详情</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #ccc;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2 id="page-title">部门职责详情</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: center; width: 50px;">序号</th>
+                    <th style="text-align: center; width: 150px;">工作职责</th>
+                    <th style="text-align: center; width: 300px;">工作职责阐述</th>
+                    <th style="text-align: center; width: 400px;">具体工作事项</th>
+                    <th style="text-align: center; width: 300px;">对应的制度文件</th>
+                </tr>
+            </thead>
+            <tbody id="responsibility-table"></tbody>
+        </table>
+        <div id="edit-button-container" style="margin-top: 20px;"></div>
+    </main>
+    <footer>
+        <p>© 2025 部门职责管理系统</p>
+    </footer>
+    <script src="nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const deptId = urlParams.get('deptId');
+
+            // 获取部门名称
+            const nameResponse = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/name`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!nameResponse.ok) throw new Error('获取部门名称失败');
+            const nameData = await nameResponse.json();
+            document.getElementById('page-title').textContent = `${nameData.department_name}职责详情`;
+
+            try {
+                // 获取职责数据
+                const response = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/responsibilities`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('获取职责数据失败');
+                const responsibilities = await response.json();
+
+                const tableBody = document.getElementById('responsibility-table');
+                responsibilities.forEach((resp, index) => {
+                    // 第一行：职责和阐述，跨行显示
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="text-align: center;" rowspan="${resp.tasks.length || 1}">${index + 1}</td>
+                        <td style="text-align: left;" rowspan="${resp.tasks.length || 1}">${resp.description}</td>
+                        <td style="text-align: left;" rowspan="${resp.tasks.length || 1}">${resp.explanation}</td>
+                        ${resp.tasks.length > 0 ? `
+                            <td style="text-align: left;">${resp.tasks[0].task_description}</td>
+                            <td style="text-align: left;">${resp.tasks[0].regulation}</td>
+                        ` : `
+                            <td style="text-align: left;"></td>
+                            <td style="text-align: left;"></td>
+                        `}
+                    `;
+                    tableBody.appendChild(tr);
+
+                    // 后续任务行
+                    for (let i = 1; i < resp.tasks.length; i++) {
+                        const taskTr = document.createElement('tr');
+                        taskTr.innerHTML = `
+                            <td style="text-align: left;">${resp.tasks[i].task_description}</td>
+                            <td style="text-align: left;">${resp.tasks[i].regulation}</td>
+                        `;
+                        tableBody.appendChild(taskTr);
+                    }
+
+                });
+
+                // 检查编辑权限
+                const userResponse = await fetch('http://10.7.209.28:3001/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!userResponse.ok) throw new Error('获取用户信息失败');
+                const user = await userResponse.json();
+
+                const role = user.role;
+                const userDepartment = user.department_id;
+                let canEdit = role === 'super_admin' || 
+                             ((role === 'dept_admin' || role === 'dept_leader') && userDepartment === deptId);
+
+                if (canEdit) {
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = '修改职责信息';
+                    editBtn.onclick = () => window.location.href = `edit_responsibilities.html?deptId=${deptId}`;
+                    document.getElementById('edit-button-container').appendChild(editBtn);
+                }
+            } catch (error) {
+                console.error('错误:', error);
+                alert('加载数据失败');
+            }
+        });
+    </script>
+</body>
+</html>

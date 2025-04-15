@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2>登录</h2>
+        <form id="login-form">
+            <label for="username">用户名：</label>
+            <input type="text" id="username" required>
+            <label for="password">密码：</label>
+            <input type="password" id="password" required>
+            <button type="submit">登录</button>
+        </form>
+        <p>没有账号？<a href="register.html">去注册</a></p>
+    </main>
+    <footer>
+        <p>© 2025 部门职责管理系统</p>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navList = document.getElementById('nav-list');
+            navList.innerHTML = `
+                <ul>
+                    <li><a href="login.html">登录</a></li>
+                    <li><a href="register.html">注册</a></li>
+                </ul>
+            `;
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://10.7.209.28:3001/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    window.location.href = 'departments.html';
+                } else {
+                    alert(data.error || '登录失败');
+                }
+            } catch (error) {
+                alert('网络错误');
+            }
+        });
+    </script>
+</body>
+</html>

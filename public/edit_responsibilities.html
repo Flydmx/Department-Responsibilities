@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>编辑职责信息</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        #responsibility-list {
+            margin-bottom: 80px;
+        }
+        .responsibility-item {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .task-item {
+            margin-top: 10px;
+            padding: 5px;
+            border-top: 1px solid #eee;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 80px;
+        }
+        .sticky-footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #fff;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2>编辑职责信息</h2>
+        <div id="responsibility-list"></div>
+        <div class="sticky-footer">
+            <button id="add-responsibility-btn">添加新职责</button>
+            <button id="save-btn">保存</button>
+        </div>
+    </main>
+    <footer>
+        <p>© 2025 部门职责管理系统</p>
+    </footer>
+    <script src="nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const deptId = urlParams.get('deptId');
+
+            try {
+            // 加载现有职责
+            const response = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/responsibilities`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('获取职责数据失败');
+            const responsibilities = await response.json();
+
+            const responsibilityList = document.getElementById('responsibility-list');
+            responsibilities.forEach((resp) => renderResponsibility(resp, responsibilityList));
+
+            // 添加新职责
+            document.getElementById('add-responsibility-btn').addEventListener('click', () => {
+                renderResponsibility({ description: '', explanation: '', tasks: [] }, responsibilityList);
+            });
+
+            // 事件委托
+            responsibilityList.addEventListener('click', function(event) {
+                if (event.target.classList.contains('add-task-btn')) {
+                    const taskList = event.target.previousElementSibling;
+                    renderTask({ task_description: '', regulation: '' }, taskList);
+                } else if (event.target.classList.contains('delete-task-btn')) {
+                    event.target.parentElement.remove();
+                } else if (event.target.classList.contains('delete-responsibility-btn')) {
+                    event.target.parentElement.remove();
+                }
+            });
+
+
+                // 保存
+document.getElementById('save-btn').addEventListener('click', async () => {
+    const items = document.querySelectorAll('.responsibility-item');
+    const newResponsibilities = Array.from(items).map(item => {
+        const desc = item.querySelector('.resp-desc').value.trim();
+        const explanation = item.querySelector('.resp-explanation').value.trim();
+        const tasks = Array.from(item.querySelectorAll('.task-item')).map(taskItem => {
+            const taskDescription = taskItem.querySelector('.task-desc').value.trim();
+            const regulation = taskItem.querySelector('.task-regulation').value.trim();
+            return taskDescription && regulation ? `${taskDescription} - ${regulation}` : taskDescription;
+        }).filter(task => task); // 过滤掉空任务
+        return desc ? { description: desc, explanation, tasks } : null;
+    }).filter(Boolean);
+
+    try {
+        const updateResponse = await fetch(`http://10.7.209.28:3001/api/departments/${deptId}/responsibilities`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(newResponsibilities)
+        });
+                        if (updateResponse.ok) {
+                            alert('保存成功');
+                            window.location.href = `department_detail.html?deptId=${deptId}`;
+                        } else {
+                            alert('保存失败');
+                        }
+                    } catch (error) {
+                        console.error('保存错误:', error);
+                        alert('网络错误');
+                    }
+                });
+            } catch (error) {
+                console.error('加载错误:', error);
+                alert('加载数据失败');
+            }
+        });
+
+        function renderResponsibility(resp, container) {
+        const div = document.createElement('div');
+        div.className = 'responsibility-item';
+        div.innerHTML = `
+            <label>工作职责：</label>
+            <input type="text" class="resp-desc" value="${resp.description}">
+            <label>工作职责阐述：</label>
+            <textarea class="resp-explanation">${resp.explanation}</textarea>
+            <div class="task-list"></div>
+            <button class="add-task-btn">添加具体工作事项</button>
+            <button class="delete-responsibility-btn">删除职责</button>
+        `;
+        const taskList = div.querySelector('.task-list');
+        resp.tasks.forEach(task => renderTask(task, taskList));
+        container.appendChild(div);
+    }
+
+    function renderTask(task, container) {
+        const taskDiv = document.createElement('div');
+        taskDiv.className = 'task-item';
+        taskDiv.innerHTML = `
+            <label>具体工作事项：</label>
+            <textarea class="task-desc">${task.task_description || ''}</textarea>
+            <label>对应的制度文件：</label>
+            <textarea class="task-regulation">${task.regulation || ''}</textarea>
+            <button class="delete-task-btn">删除事项</button>
+        `;
+            container.appendChild(taskDiv);
+    }
+    </script>
+</body>
+</html>

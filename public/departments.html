@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>部门职责</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .department-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .department-abbr {
+            width: 18%;
+            text-align: center;
+            padding: 5px;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #333;
+            box-sizing: border-box;
+        }
+        .department-abbr:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <h2>部门职责信息</h2>
+        <div class="department-list"></div>
+    </main>
+    <footer>
+        <p>© 2025 部门职责管理系统</p>
+    </footer>
+    <script src="nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+
+            try {
+                const response = await fetch('http://10.7.209.28:3001/api/departments', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const departments = await response.json();
+
+                const departmentList = document.querySelector('.department-list');
+                departmentList.innerHTML = '';
+
+                for (const category in departments) {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'category';
+                    categoryDiv.innerHTML = `<h3>${category}</h3>`;
+
+                    for (const subcategory in departments[category]) {
+                        const subcategoryDiv = document.createElement('div');
+                        subcategoryDiv.className = 'subcategory';
+                        subcategoryDiv.innerHTML = `<h4>${subcategory}</h4>`;
+
+                        const deptList = departments[category][subcategory];
+                        const rows = Math.ceil(deptList.length / 5);
+
+                        for (let i = 0; i < rows; i++) {
+                            const rowDiv = document.createElement('div');
+                            rowDiv.className = 'department-row';
+
+                            for (let j = 0; j < 5; j++) {
+                                const index = i * 5 + j;
+                                if (index < deptList.length) {
+                                    const dept = deptList[index];
+                                    const deptLink = document.createElement('a');
+                                    deptLink.href = `department_detail.html?deptId=${dept.id}`;
+                                    deptLink.textContent = dept.abbr;
+                                    deptLink.className = 'department-abbr';
+                                    rowDiv.appendChild(deptLink);
+                                }
+                            }
+
+                            subcategoryDiv.appendChild(rowDiv);
+                        }
+
+                        categoryDiv.appendChild(subcategoryDiv);
+                    }
+
+                    departmentList.appendChild(categoryDiv);
+                }
+            } catch (error) {
+                console.error('获取部门数据失败', error);
+                alert('获取部门数据失败');
+            }
+        });
+    </script>
+</body>
+</html>

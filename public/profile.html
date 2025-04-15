@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>个人信息</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav id="nav-list"></nav>
+    </header>
+    <main>
+        <section class="profile">
+            <h2>个人信息</h2>
+            <div class="profile-info"></div>
+            <form id="update-form">
+                <label for="new-username">新用户名：</label>
+                <input type="text" id="new-username">
+                <label for="new-password">新密码：</label>
+                <input type="password" id="new-password">
+                <button type="submit">更新</button>
+            </form>
+        </section>
+    </main>
+    <footer>
+        <p>© 2025 部门职责管理系统</p>
+    </footer>
+    <script src="nav.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+
+            try {
+                // 假设后端新增 /api/profile 接口
+                const response = await fetch('http://10.7.209.28:3001/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const user = await response.json();
+
+                const profileInfo = document.querySelector('.profile-info');
+                profileInfo.innerHTML = `
+                    <p>用户名：${user.username}</p>
+                    <p>角色：${user.role}</p>
+                    <p>部门：${user.department_name || '无'}</p>
+                `;
+
+
+                document.getElementById('new-username').value = user.username;
+
+                document.getElementById('update-form').addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const newUsername = document.getElementById('new-username').value;
+                    const newPassword = document.getElementById('new-password').value;
+                    const newDepartment = user.department_id;
+
+                    const updateData = {};
+                    if (newUsername && newUsername !== user.username) updateData.username = newUsername;
+                    if (newPassword) updateData.password = newPassword;
+
+                    try {
+                        const updateResponse = await fetch('http://10.7.209.28:3001/api/profile', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(updateData)
+                        });
+                        const result = await updateResponse.json();
+                        if (updateResponse.ok) {
+                            alert('用户信息更新成功');
+                            window.location.reload();
+                        } else {
+                            alert(result.error || '更新失败');
+                        }
+                    } catch (error) {
+                        alert('网络错误');
+                    }
+                });
+            } catch (error) {
+                console.error('获取用户信息失败', error);
+                alert('获取用户信息失败');
+            }
+        });
+    </script>
+</body>
+</html>
